@@ -263,7 +263,7 @@ mod tests {
         let exp = (num_coeffs as f32).log2().floor() as u32;
         let mut omega = E::Fr::root_of_unity();
         for _ in exp..E::Fr::S {
-            omega = omega.square();
+            omega.square();
         }
         omega
     }
