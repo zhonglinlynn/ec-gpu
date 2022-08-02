@@ -1,12 +1,15 @@
 use std::any::TypeId;
 use std::ops::AddAssign;
 use std::sync::{Arc, RwLock};
-
-use ec_gpu::GpuEngine;
-use ff::PrimeField;
-use group::{prime::PrimeCurveAffine, Group};
 use log::{error, info};
-use pairing::Engine;
+
+use pairing_ce::gpu_engine::GpuEngine;
+use pairing_ce::{
+    ff::{PrimeField, ScalarEngine},
+    CurveAffine, CurveProjective, Engine,
+};
+
+
 use rust_gpu_tools::{program_closures, Device, Program};
 use yastl::Scope;
 
@@ -133,9 +136,9 @@ where
         bases: &[G],
         exps: &[<G::Scalar as PrimeField>::Repr],
         n: usize,
-    ) -> EcResult<G::Curve>
+    ) -> EcResult<<G as CurveAffine>::Projective>
     where
-        G: PrimeCurveAffine,
+        G: CurveAffine,
     {
         if let Some(maybe_abort) = &self.maybe_abort {
             if maybe_abort() {
@@ -152,15 +155,15 @@ where
         // be `num_groups` * `num_windows` threads in total.
         // Each thread will use `num_groups` * `num_windows` * `bucket_len` buckets.
 
-        let closures = program_closures!(|program, _arg| -> EcResult<Vec<G::Curve>> {
+        let closures = program_closures!(|program, _arg| -> EcResult<Vec<<G as CurveAffine>::Projective>> {
             let base_buffer = program.create_buffer_from_slice(bases)?;
             let exp_buffer = program.create_buffer_from_slice(exps)?;
 
             // It is safe as the GPU will initialize that buffer
             let bucket_buffer =
-                unsafe { program.create_buffer::<G::Curve>(self.work_units * bucket_len)? };
+                unsafe { program.create_buffer::<<G as CurveAffine>::Projective>(self.work_units * bucket_len)? };
             // It is safe as the GPU will initialize that buffer
-            let result_buffer = unsafe { program.create_buffer::<G::Curve>(self.work_units)? };
+            let result_buffer = unsafe { program.create_buffer::<<G as CurveAffine>::Projective>(self.work_units)? };
 
             // The global work size follows CUDA's definition and is the number of
             // `LOCAL_WORK_SIZE` sized thread groups.
@@ -189,7 +192,7 @@ where
                 .arg(&(window_size as u32))
                 .run()?;
 
-            let mut results = vec![G::Curve::identity(); self.work_units];
+            let mut results = vec![<G as CurveAffine>::Projective::zero(); self.work_units];
             program.read_into_buffer(&result_buffer, &mut results)?;
 
             Ok(results)
@@ -199,7 +202,7 @@ where
 
         // Using the algorithm below, we can calculate the final result by accumulating the results
         // of those `NUM_GROUPS` * `NUM_WINDOWS` threads.
-        let mut acc = G::Curve::identity();
+        let mut acc = <G as CurveAffine>::Projective::zero();
         let mut bits = 0;
         let exp_bits = exp_size::<E>() * 8;
         for i in 0..num_windows {
@@ -301,10 +304,10 @@ where
         scope: &Scope<'s>,
         bases: &'s [G],
         exps: &'s [<G::Scalar as PrimeField>::Repr],
-        results: &'s mut [G::Curve],
+        results: &'s mut [<G as CurveAffine>::Projective],
         error: Arc<RwLock<EcResult<()>>>,
     ) where
-        G: PrimeCurveAffine<Scalar = E::Fr>,
+        G: CurveAffine<Scalar = E::Fr>,
     {
         let num_devices = self.kernels.len();
         let num_exps = exps.len();
@@ -321,7 +324,7 @@ where
         {
             let error = error.clone();
             scope.execute(move || {
-                let mut acc = G::Curve::identity();
+                let mut acc = <G as CurveAffine>::Projective::zero();
                 for (bases, exps) in bases.chunks(kern.n).zip(exps.chunks(kern.n)) {
                     if error.read().unwrap().is_err() {
                         break;
@@ -350,9 +353,9 @@ where
         bases_arc: Arc<Vec<G>>,
         exps: Arc<Vec<<G::Scalar as PrimeField>::Repr>>,
         skip: usize,
-    ) -> EcResult<G::Curve>
+    ) -> EcResult<<G as CurveAffine>::Projective>
     where
-        G: PrimeCurveAffine<Scalar = E::Fr>,
+        G: CurveAffine<Scalar = E::Fr>,
     {
         // Bases are skipped by `self.1` elements, when converted from (Arc<Vec<G>>, usize) to Source
         // https://github.com/zkcrypto/bellman/blob/10c5010fd9c2ca69442dc9775ea271e286e776d8/src/multiexp.rs#L38
@@ -363,7 +366,7 @@ where
         let error = Arc::new(RwLock::new(Ok(())));
 
         pool.scoped(|s| {
-            results = vec![G::Curve::identity(); self.kernels.len()];
+            results = vec![<G as CurveAffine>::Projective::zero(); self.kernels.len()];
             self.parallel_multiexp(s, bases, exps, &mut results, error.clone());
         });
 
@@ -372,7 +375,7 @@ where
             .into_inner()
             .unwrap()?;
 
-        let mut acc = G::Curve::identity();
+        let mut acc = <G as CurveAffine>::Projective::zero();
         for r in results {
             acc.add_assign(&r);
         }
@@ -393,8 +396,10 @@ mod tests {
     use std::time::Instant;
 
     use blstrs::Bls12;
-    use ff::Field;
+    use pairing_ce::bn256::Bn256;
+    use pairing_ce::ff::Field;
     use group::Curve;
+    use rand::{thread_rng, Rng};
 
     use crate::multiexp_cpu::{multiexp_cpu, FullDensity, QueryDensity, SourceBuilder};
 
@@ -404,11 +409,11 @@ mod tests {
         density_map: D,
         exponents: Arc<Vec<<G::Scalar as PrimeField>::Repr>>,
         kern: &mut MultiexpKernel<E>,
-    ) -> Result<G::Curve, EcError>
+    ) -> Result<<G as CurveAffine>::Projective, EcError>
     where
         for<'a> &'a Q: QueryDensity,
         D: Send + Sync + 'static + Clone + AsRef<Q>,
-        G: PrimeCurveAffine,
+        G: CurveAffine,
         E: GpuEngine,
         E: Engine<Fr = G::Scalar>,
         S: SourceBuilder<G>,
@@ -420,17 +425,19 @@ mod tests {
 
     #[test]
     fn gpu_multiexp_consistency() {
+        let rng1 = &mut thread_rng();
+
         const MAX_LOG_D: usize = 16;
         const START_LOG_D: usize = 10;
         let devices = Device::all();
         let mut kern =
-            MultiexpKernel::<Bls12>::create(&devices).expect("Cannot initialize kernel!");
+            MultiexpKernel::<Bn256>::create(&devices).expect("Cannot initialize kernel!");
         let pool = Worker::new();
 
         let mut rng = rand::thread_rng();
 
         let mut bases = (0..(1 << 10))
-            .map(|_| <Bls12 as Engine>::G1::random(&mut rng).to_affine())
+            .map(|_| <Bn256 as Engine>::G1::rand(&mut rng).to_affine())
             .collect::<Vec<_>>();
 
         for log_d in START_LOG_D..=MAX_LOG_D {
@@ -441,8 +448,7 @@ mod tests {
 
             let v = Arc::new(
                 (0..samples)
-                    .map(|_| <Bls12 as Engine>::Fr::random(&mut rng).to_repr())
-                    .collect::<Vec<_>>(),
+                    .map(|_| rng1.gen()).collect::<Vec<_>>(),
             );
 
             let mut now = Instant::now();
@@ -453,7 +459,7 @@ mod tests {
 
             now = Instant::now();
             let cpu =
-                multiexp_cpu::<_, _, _, Bls12, _>(&pool, (g.clone(), 0), FullDensity, v.clone())
+                multiexp_cpu::<_, _, _, Bn256, _>(&pool, (g.clone(), 0), FullDensity, v.clone())
                     .wait()
                     .unwrap();
             let cpu_dur = now.elapsed().as_secs() * 1000 + now.elapsed().subsec_millis() as u64;

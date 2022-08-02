@@ -6,16 +6,20 @@ use std::ops::AddAssign;
 use std::sync::Arc;
 
 use bitvec::prelude::{BitVec, Lsb0};
-use ff::{Field, PrimeField};
-use group::{prime::PrimeCurveAffine, Group};
-use pairing::Engine;
+
+use pairing_ce::gpu_engine::GpuEngine;
+use pairing_ce::{
+    ff::{PrimeField, Field},
+    CurveAffine, CurveProjective, Engine,
+};
+
 use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
 
 use crate::error::EcError;
 use crate::threadpool::{Waiter, Worker};
 
 /// An object that builds a source of bases.
-pub trait SourceBuilder<G: PrimeCurveAffine>: Send + Sync + 'static + Clone {
+pub trait SourceBuilder<G: CurveAffine>: Send + Sync + 'static + Clone {
     type Source: Source<G>;
 
     #[allow(clippy::wrong_self_convention)]
@@ -24,15 +28,15 @@ pub trait SourceBuilder<G: PrimeCurveAffine>: Send + Sync + 'static + Clone {
 }
 
 /// A source of bases, like an iterator.
-pub trait Source<G: PrimeCurveAffine> {
+pub trait Source<G: CurveAffine> {
     /// Parses the element from the source. Fails if the point is at infinity.
-    fn add_assign_mixed(&mut self, to: &mut <G as PrimeCurveAffine>::Curve) -> Result<(), EcError>;
+    fn add_assign_mixed(&mut self, to: &mut <G as CurveAffine>::Projective) -> Result<(), EcError>;
 
     /// Skips `amt` elements from the source, avoiding deserialization.
     fn skip(&mut self, amt: usize) -> Result<(), EcError>;
 }
 
-impl<G: PrimeCurveAffine> SourceBuilder<G> for (Arc<Vec<G>>, usize) {
+impl<G: CurveAffine> SourceBuilder<G> for (Arc<Vec<G>>, usize) {
     type Source = (Arc<Vec<G>>, usize);
 
     fn new(self) -> (Arc<Vec<G>>, usize) {
@@ -44,8 +48,8 @@ impl<G: PrimeCurveAffine> SourceBuilder<G> for (Arc<Vec<G>>, usize) {
     }
 }
 
-impl<G: PrimeCurveAffine> Source<G> for (Arc<Vec<G>>, usize) {
-    fn add_assign_mixed(&mut self, to: &mut <G as PrimeCurveAffine>::Curve) -> Result<(), EcError> {
+impl<G: CurveAffine> Source<G> for (Arc<Vec<G>>, usize) {
+    fn add_assign_mixed(&mut self, to: &mut <G as CurveAffine>::Projective) -> Result<(), EcError> {
         if self.0.len() <= self.1 {
             return Err(io::Error::new(
                 io::ErrorKind::UnexpectedEof,
@@ -253,11 +257,11 @@ fn multiexp_inner<Q, D, G, S>(
     density_map: D,
     exponents: Arc<Vec<<G::Scalar as PrimeField>::Repr>>,
     c: u32,
-) -> Result<<G as PrimeCurveAffine>::Curve, EcError>
+) -> Result<<G as CurveAffine>::Projective, EcError>
 where
     for<'a> &'a Q: QueryDensity,
     D: Send + Sync + 'static + Clone + AsRef<Q>,
-    G: PrimeCurveAffine,
+    G: CurveAffine,
     S: SourceBuilder<G>,
 {
     // Perform this region of the multiexp
@@ -267,13 +271,13 @@ where
                      skip: u32|
           -> Result<_, EcError> {
         // Accumulate the result
-        let mut acc = G::Curve::identity();
+        let mut acc = G::Projective::zero();
 
         // Build a source for the bases
         let mut bases = bases.new();
 
         // Create space for the buckets
-        let mut buckets = vec![<G as PrimeCurveAffine>::Curve::identity(); (1 << c) - 1];
+        let mut buckets = vec![<G as CurveAffine>::Projective::zero(); (1 << c) - 1];
 
         let zero = G::Scalar::zero().to_repr();
         let one = G::Scalar::one().to_repr();
@@ -310,7 +314,7 @@ where
         // e.g. 3a + 2b + 1c = a +
         //                    (a) + b +
         //                    ((a) + b) + c
-        let mut running_sum = G::Curve::identity();
+        let mut running_sum = G::Projective::zero();
         for exp in buckets.into_iter().rev() {
             running_sum.add_assign(&exp);
             acc.add_assign(&running_sum);
@@ -326,7 +330,7 @@ where
         .collect::<Vec<Result<_, _>>>();
 
     parts.into_iter().rev().try_fold(
-        <G as PrimeCurveAffine>::Curve::identity(),
+        <G as CurveAffine>::Projective::zero(),
         |mut acc, part| {
             for _ in 0..c {
                 acc = acc.double();
@@ -345,11 +349,11 @@ pub fn multiexp_cpu<'b, Q, D, G, E, S>(
     bases: S,
     density_map: D,
     exponents: Arc<Vec<<G::Scalar as PrimeField>::Repr>>,
-) -> Waiter<Result<<G as PrimeCurveAffine>::Curve, EcError>>
+) -> Waiter<Result<<G as CurveAffine>::Projective, EcError>>
 where
     for<'a> &'a Q: QueryDensity,
     D: Send + Sync + 'static + Clone + AsRef<Q>,
-    G: PrimeCurveAffine,
+    G: CurveAffine,
     E: Engine<Fr = G::Scalar>,
     S: SourceBuilder<G>,
 {
@@ -372,21 +376,22 @@ where
 mod tests {
     use super::*;
 
-    use blstrs::Bls12;
-    use group::Curve;
+    use pairing_ce::bn256::Bn256;
+    use pairing_ce::ff::ScalarEngine;
     use rand::Rng;
     use rand_core::SeedableRng;
     use rand_xorshift::XorShiftRng;
+    use rand::{thread_rng, Rng};
 
     #[test]
     fn test_with_bls12() {
-        fn naive_multiexp<G: PrimeCurveAffine>(
+        fn naive_multiexp<G: CurveAffine>(
             bases: Arc<Vec<G>>,
             exponents: &[G::Scalar],
-        ) -> G::Curve {
+        ) -> G::Projective {
             assert_eq!(bases.len(), exponents.len());
 
-            let mut acc = G::Curve::identity();
+            let mut acc = G::Projective::zero();
 
             for (base, exp) in bases.iter().zip(exponents.iter()) {
                 acc.add_assign(&base.mul(*exp));
@@ -395,15 +400,21 @@ mod tests {
             acc
         }
 
+        let rng1 = &mut thread_rng();
+
         const SAMPLES: usize = 1 << 14;
 
         let rng = &mut rand::thread_rng();
-        let v: Vec<<Bls12 as Engine>::Fr> = (0..SAMPLES)
-            .map(|_| <Bls12 as Engine>::Fr::random(&mut *rng))
+        let v: Vec<ScalarEngine::Fr> = (0..SAMPLES)
+            .map(|_| ScalarEngine::Fr::rand(&mut *rng))
             .collect();
+
+        let v: Vec<ScalarEngine::Fr> = (0..SAMPLES)
+            .map(|_| rng1.gen()).collect::<Vec<_>>();
+
         let g = Arc::new(
             (0..SAMPLES)
-                .map(|_| <Bls12 as Engine>::G1::random(&mut *rng).to_affine())
+                .map(|_| <Bn256 as Engine>::G1::rand(&mut *rng).to_affine())
                 .collect::<Vec<_>>(),
         );
 
@@ -415,7 +426,7 @@ mod tests {
         let pool = Worker::new();
 
         let v = Arc::new(v.into_iter().map(|fr| fr.to_repr()).collect());
-        let fast = multiexp_cpu::<_, _, _, Bls12, _>(&pool, (g, 0), FullDensity, v)
+        let fast = multiexp_cpu::<_, _, _, Bn256, _>(&pool, (g, 0), FullDensity, v)
             .wait()
             .unwrap();
 

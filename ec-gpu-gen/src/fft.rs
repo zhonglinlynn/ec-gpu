@@ -1,5 +1,4 @@
 use std::cmp;
-use std::ops::MulAssign;
 use std::sync::{Arc, RwLock};
 use log::{error, info};
 
@@ -107,6 +106,7 @@ impl<'a, E: Engine + GpuEngine> SingleFftKernel<'a, E> {
                     global_work_size as usize,
                     local_work_size as usize,
                 )?;
+
                 kernel
                     .arg(&src_buffer)
                     .arg(&dst_buffer)
@@ -253,6 +253,7 @@ mod tests {
     use pairing_ce::ff::{Field, PrimeField};
     use pairing_ce::bn256::Bn256;
     use rand::{thread_rng, Rng};
+    use pairing_ce::ff::ScalarEngine;
 
 
     use crate::fft_cpu::{parallel_fft, serial_fft};
@@ -280,7 +281,7 @@ mod tests {
         for log_d in 1..=20 {
             let d = 1 << log_d;
 
-            let mut v1_coeffs = (0..d).map(|_| rng.gen()).collect::<Vec<_>>();
+            let mut v1_coeffs: Vec<<Bn256 as ScalarEngine>::Fr> = (0..d).map(|_| rng.gen()).collect::<Vec<_>>();
 
             let v1_omega = omega::<Bn256>(v1_coeffs.len());
             let mut v2_coeffs = v1_coeffs.clone();
