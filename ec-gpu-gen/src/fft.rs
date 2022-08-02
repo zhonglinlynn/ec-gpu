@@ -278,7 +278,7 @@ mod tests {
         let devices = Device::all();
         let mut kern = FftKernel::<Bn256>::create(&devices).expect("Cannot initialize kernel!");
 
-        for log_d in 1..=20 {
+        for log_d in 10..=25 {
             let d = 1 << log_d;
 
             let mut v1_coeffs: Vec<<Bn256 as ScalarEngine>::Fr> = (0..d).map(|_| rng.gen()).collect::<Vec<_>>();
