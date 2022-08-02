@@ -252,7 +252,6 @@ mod tests {
 
     use pairing_ce::ff::{Field, PrimeField};
     use pairing_ce::bn256::Bn256;
-    use std::time::Instant;
     use rand::{thread_rng, Rng};
 
 
@@ -282,9 +281,10 @@ mod tests {
             let d = 1 << log_d;
 
             let mut v1_coeffs = (0..d).map(|_| rng.gen()).collect::<Vec<_>>();
+
             let v1_omega = omega::<Bn256>(v1_coeffs.len());
             let mut v2_coeffs = v1_coeffs.clone();
-            let v2_omega = v1_omega;
+            let v2_omega = v1_omega.clone();
 
             println!("Testing FFT for {} elements...", d);
 
