@@ -66,7 +66,7 @@ impl<'a, E: Engine + GpuEngine> SingleFftKernel<'a, E> {
             // Precalculate:
             // [omega^(0/(2^(deg-1))), omega^(1/(2^(deg-1))), ..., omega^((2^(deg-1)-1)/(2^(deg-1)))]
             let mut pq = vec![E::Fr::zero(); 1 << max_deg >> 1];
-            let twiddle = omega.pow_vartime([(n >> max_deg) as u64]);
+            let twiddle = omega.pow([(n >> max_deg) as u64]);
             pq[0] = E::Fr::one();
             if max_deg > 1 {
                 pq[1] = twiddle;
@@ -81,7 +81,7 @@ impl<'a, E: Engine + GpuEngine> SingleFftKernel<'a, E> {
             let mut omegas = vec![E::Fr::zero(); 32];
             omegas[0] = *omega;
             for i in 1..LOG2_MAX_ELEMENTS {
-                omegas[i] = omegas[i - 1].pow_vartime([2u64]);
+                omegas[i] = omegas[i - 1].pow([2u64]);
             }
             let omegas_buffer = program.create_buffer_from_slice(&omegas)?;
 

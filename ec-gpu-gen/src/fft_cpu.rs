@@ -30,7 +30,7 @@ pub fn serial_fft<E: Engine>(a: &mut [E::Fr], omega: &E::Fr, log_n: u32) {
 
     let mut m = 1;
     for _ in 0..log_n {
-        let w_m = omega.pow_vartime(&[u64::from(n / (2 * m))]);
+        let w_m = omega.pow(&[u64::from(n / (2 * m))]);
 
         let mut k = 0;
         while k < n {
@@ -69,7 +69,7 @@ pub fn parallel_fft<E: Engine>(
     let num_threads = 1 << log_threads;
     let log_new_n = log_n - log_threads;
     let mut tmp = vec![vec![E::Fr::zero(); 1 << log_new_n]; num_threads];
-    let new_omega = omega.pow_vartime(&[num_threads as u64]);
+    let new_omega = omega.pow(&[num_threads as u64]);
 
     worker.scope(0, |scope, _| {
         let a = &*a;
