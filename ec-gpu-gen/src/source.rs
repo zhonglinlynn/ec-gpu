@@ -109,7 +109,7 @@ impl Limb for Limb32 {
         "uint"
     }
     fn one_limbs<F: GpuField>() -> Vec<Self> {
-        F::one().into_iter().map(Self::new).collect()
+        F::identity().into_iter().map(Self::new).collect()
     }
     fn modulus_limbs<F: GpuField>() -> Vec<Self> {
         F::modulus().into_iter().map(Self::new).collect()
@@ -148,7 +148,7 @@ impl Limb for Limb64 {
         "ulong"
     }
     fn one_limbs<F: GpuField>() -> Vec<Self> {
-        F::one()
+        F::identity()
             .chunks(2)
             .map(|chunk| Self::new(((chunk[1] as u64) << 32) + (chunk[0] as u64)))
             .collect()

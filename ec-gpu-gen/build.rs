@@ -44,7 +44,7 @@ mod kernel {
     use std::path::PathBuf;
     use std::{env, fs};
 
-    use blstrs::Bls12;
+    use pairing_ce::bn256::Bn256;
 
     #[cfg(feature = "cuda")]
     pub(crate) fn generate_cuda() {
@@ -57,7 +57,7 @@ mod kernel {
             return;
         }
 
-        let kernel_source = crate::source::gen_source::<Bls12, crate::source::Limb32>();
+        let kernel_source = crate::source::gen_source::<Bn256, crate::source::Limb32>();
         let out_dir = env::var("OUT_DIR").expect("OUT_DIR was not set.");
 
         // Make it possible to override the default options. Though the source and output file is
@@ -129,7 +129,7 @@ mod kernel {
 
     #[cfg(feature = "opencl")]
     pub(crate) fn generate_opencl() {
-        let kernel_source = crate::source::gen_source::<Bls12, crate::source::Limb64>();
+        let kernel_source = crate::source::gen_source::<Bn256, crate::source::Limb64>();
         let out_dir = env::var("OUT_DIR").expect("OUT_DIR was not set.");
 
         // Generating the kernel source is cheap, hence use a fixed name and override it on every
