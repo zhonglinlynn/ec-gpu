@@ -29,9 +29,9 @@ pub mod fft;
 #[cfg(feature = "fft")]
 pub mod fft_cpu;
 /// Multiexponentiation on the GPU.
-#[cfg(all(feature = "multiexp", any(feature = "cuda", feature = "opencl")))]
-pub mod multiexp;
-/// Multiexponentiation on the CPU.
+// #[cfg(all(feature = "multiexp", any(feature = "cuda", feature = "opencl")))]
+// pub mod multiexp;
+// /// Multiexponentiation on the CPU.
 // #[cfg(feature = "multiexp")]
 // pub mod multiexp_cpu;
 /// Helpers for multithreaded code.

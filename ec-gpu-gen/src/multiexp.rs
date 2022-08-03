@@ -399,7 +399,7 @@ mod tests {
     use pairing_ce::ff::ScalarEngine;
     use rand::{thread_rng, Rng};
 
-    //use crate::multiexp_cpu::{multiexp_cpu, FullDensity, QueryDensity, SourceBuilder};
+    use crate::multiexp_cpu::{FullDensity, QueryDensity, SourceBuilder};
 
     fn multiexp_gpu<Q, D, G, E, S>(
         pool: &Worker,
