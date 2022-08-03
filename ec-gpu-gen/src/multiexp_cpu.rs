@@ -329,9 +329,8 @@ where
         <G as CurveAffine>::Projective::zero(),
         |mut acc, part| {
             for _ in 0..c {
-                acc = acc.double();
+                acc.double();
             }
-
             acc.add_assign(&part?);
             Ok(acc)
         },
