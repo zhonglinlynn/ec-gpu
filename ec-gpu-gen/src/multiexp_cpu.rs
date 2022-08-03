@@ -4,13 +4,12 @@ use std::io;
 use std::iter;
 use std::ops::AddAssign;
 use std::sync::Arc;
-
 use bitvec::prelude::{BitVec, Lsb0};
 
-use pairing_ce::{
-    ff::{PrimeField, ScalarEngine, Field},
-    CurveAffine, CurveProjective, Engine,
-};
+//use group::{prime::PrimeCurveAffine, Group};
+use pairing_ce::gpu_engine::GpuEngine;
+use pairing_ce::ff::{Field, PrimeField, ScalarEngine};
+use pairing_ce::{Engine, CurveAffine, CurveProjective};
 
 use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
 use crate::error::EcError;
@@ -34,7 +33,7 @@ pub trait Source<G: CurveAffine> {
     fn skip(&mut self, amt: usize) -> Result<(), EcError>;
 }
 
-impl<G: CurveAffine > SourceBuilder<G> for (Arc<Vec<G>>, usize) {
+impl<G: CurveAffine> SourceBuilder<G> for (Arc<Vec<G>>, usize) {
     type Source = (Arc<Vec<G>>, usize);
 
     fn new(self) -> (Arc<Vec<G>>, usize) {
@@ -46,7 +45,7 @@ impl<G: CurveAffine > SourceBuilder<G> for (Arc<Vec<G>>, usize) {
     }
 }
 
-impl<G: CurveAffine > Source<G> for (Arc<Vec<G>>, usize) {
+impl<G: CurveAffine> Source<G> for (Arc<Vec<G>>, usize) {
     fn add_assign_mixed(&mut self, to: &mut <G as CurveAffine>::Projective) -> Result<(), EcError> {
         if self.0.len() <= self.1 {
             return Err(io::Error::new(
@@ -62,7 +61,7 @@ impl<G: CurveAffine > Source<G> for (Arc<Vec<G>>, usize) {
             ));
         }
 
-        to.add_assign_mixed(&self.0[self.1]);
+        to.add_assign(&self.0[self.1]);
 
         self.1 += 1;
 
@@ -277,8 +276,8 @@ where
         // Create space for the buckets
         let mut buckets = vec![<G as CurveAffine>::Projective::zero(); (1 << c) - 1];
 
-        let zero = G::Scalar::zero().into_repr();
-        let one = G::Scalar::one().into_repr();
+        let zero = G::Scalar::zero().to_repr();
+        let one = G::Scalar::one().to_repr();
 
         // only the first round uses this
         let handle_trivial = skip == 0;
@@ -331,7 +330,7 @@ where
         <G as CurveAffine>::Projective::zero(),
         |mut acc, part| {
             for _ in 0..c {
-                acc.double();
+                acc = acc.double();
             }
 
             acc.add_assign(&part?);
@@ -374,15 +373,17 @@ where
 mod tests {
     use super::*;
 
-    use pairing_ce::bn256::Bn256;
-    use pairing_ce::ff::ScalarEngine;
-    use rand::Rng;
+    //use pairing_ce::bn256::Bn256;
+    use pairing_ce::compact_bn256::Bn256;
+    //use pairing_ce::bls12_381::Bls12 as Bn256;
+
+
+    use rand::{thread_rng, Rng, Rand};
     use rand_core::SeedableRng;
     use rand_xorshift::XorShiftRng;
-    use rand::{thread_rng, Rng};
 
     #[test]
-    fn test() {
+    fn multiexp() {
         fn naive_multiexp<G: CurveAffine>(
             bases: Arc<Vec<G>>,
             exponents: &[G::Scalar],
@@ -398,18 +399,14 @@ mod tests {
             acc
         }
 
-        let rng1 = &mut thread_rng();
-
         const SAMPLES: usize = 1 << 14;
 
         let rng = &mut rand::thread_rng();
+        let rng_1 = &mut thread_rng();
 
-        // let v: Vec<ScalarEngine::Fr> = (0..SAMPLES)
-        //     .map(|_| ScalarEngine::Fr::rand(&mut *rng))
-        //     .collect();
+        let v: Vec<<Bn256 as ScalarEngine>::Fr> = (0..SAMPLES)
+            .map(|_| rng_1.gen()).collect::<Vec<_>>();
 
-        let v: Vec<ScalarEngine::Fr> = (0..SAMPLES)
-            .map(|_| rng1.gen()).collect::<Vec<_>>();
 
         let g = Arc::new(
             (0..SAMPLES)
@@ -430,6 +427,7 @@ mod tests {
             .unwrap();
 
         println!("Fast: {}", now.elapsed().as_millis());
+
         assert_eq!(naive, fast);
     }
 }

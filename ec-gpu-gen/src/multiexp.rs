@@ -1,13 +1,12 @@
 use std::any::TypeId;
+use std::ops::AddAssign;
 use std::sync::{Arc, RwLock};
 use log::{error, info};
 
+//use group::{prime::PrimeCurveAffine, Group};
 use pairing_ce::gpu_engine::GpuEngine;
-use pairing_ce::{
-    ff::PrimeField,
-    CurveAffine, CurveProjective, Engine,
-};
-
+use pairing_ce::ff::{PrimeField, ScalarEngine};
+use pairing_ce::{Engine, CurveAffine, CurveProjective};
 
 use rust_gpu_tools::{program_closures, Device, Program};
 use yastl::Scope;
@@ -92,8 +91,8 @@ where
 /// The size of the exponent in bytes.
 ///
 /// It's the actual bytes size it needs in memory, not it's theoratical bit size.
-fn exp_size<E: Engine>() -> usize{
-    std::mem::size_of::<<E::Fr as pairing_ce::ff::PrimeField>::Repr>()
+fn exp_size<E: Engine>() -> usize {
+    std::mem::size_of::<<E::Fr as ff::PrimeField>::Repr>()
 }
 
 impl<'a, E> SingleMultiexpKernel<'a, E>
@@ -135,7 +134,7 @@ where
         bases: &[G],
         exps: &[<G::Scalar as PrimeField>::Repr],
         n: usize,
-    ) -> EcResult<<G as CurveAffine>::Projective>
+    ) -> EcResult<G::Projective>
     where
         G: CurveAffine,
     {
@@ -154,15 +153,15 @@ where
         // be `num_groups` * `num_windows` threads in total.
         // Each thread will use `num_groups` * `num_windows` * `bucket_len` buckets.
 
-        let closures = program_closures!(|program, _arg| -> EcResult<Vec<<G as CurveAffine>::Projective>> {
+        let closures = program_closures!(|program, _arg| -> EcResult<Vec<G::Projective>> {
             let base_buffer = program.create_buffer_from_slice(bases)?;
             let exp_buffer = program.create_buffer_from_slice(exps)?;
 
             // It is safe as the GPU will initialize that buffer
             let bucket_buffer =
-                unsafe { program.create_buffer::<<G as CurveAffine>::Projective>(self.work_units * bucket_len)? };
+                unsafe { program.create_buffer::<G::Projective>(self.work_units * bucket_len)? };
             // It is safe as the GPU will initialize that buffer
-            let result_buffer = unsafe { program.create_buffer::<<G as CurveAffine>::Projective>(self.work_units)? };
+            let result_buffer = unsafe { program.create_buffer::<G::Projective>(self.work_units)? };
 
             // The global work size follows CUDA's definition and is the number of
             // `LOCAL_WORK_SIZE` sized thread groups.
@@ -191,7 +190,7 @@ where
                 .arg(&(window_size as u32))
                 .run()?;
 
-            let mut results = vec![<G as CurveAffine>::Projective::zero(); self.work_units];
+            let mut results = vec![G::Projective::zero(); self.work_units];
             program.read_into_buffer(&result_buffer, &mut results)?;
 
             Ok(results)
@@ -201,13 +200,13 @@ where
 
         // Using the algorithm below, we can calculate the final result by accumulating the results
         // of those `NUM_GROUPS` * `NUM_WINDOWS` threads.
-        let mut acc = <G as CurveAffine>::Projective::zero();
+        let mut acc = G::Projective::zero();
         let mut bits = 0;
         let exp_bits = exp_size::<E>() * 8;
         for i in 0..num_windows {
             let w = std::cmp::min(window_size, exp_bits - bits);
             for _ in 0..w {
-                acc.double();
+                acc = acc.double();
             }
             for g in 0..num_groups {
                 acc.add_assign(&results[g * num_windows + i]);
@@ -303,7 +302,7 @@ where
         scope: &Scope<'s>,
         bases: &'s [G],
         exps: &'s [<G::Scalar as PrimeField>::Repr],
-        results: &'s mut [<G as CurveAffine>::Projective],
+        results: &'s mut [G::Projective],
         error: Arc<RwLock<EcResult<()>>>,
     ) where
         G: CurveAffine<Scalar = E::Fr>,
@@ -323,7 +322,7 @@ where
         {
             let error = error.clone();
             scope.execute(move || {
-                let mut acc = <G as CurveAffine>::Projective::zero();
+                let mut acc = G::Projective::zero();
                 for (bases, exps) in bases.chunks(kern.n).zip(exps.chunks(kern.n)) {
                     if error.read().unwrap().is_err() {
                         break;
@@ -352,7 +351,7 @@ where
         bases_arc: Arc<Vec<G>>,
         exps: Arc<Vec<<G::Scalar as PrimeField>::Repr>>,
         skip: usize,
-    ) -> EcResult<<G as CurveAffine>::Projective>
+    ) -> EcResult<G::Projective>
     where
         G: CurveAffine<Scalar = E::Fr>,
     {
@@ -365,7 +364,7 @@ where
         let error = Arc::new(RwLock::new(Ok(())));
 
         pool.scoped(|s| {
-            results = vec![<G as CurveAffine>::Projective::zero(); self.kernels.len()];
+            results = vec![G::Projective::zero(); self.kernels.len()];
             self.parallel_multiexp(s, bases, exps, &mut results, error.clone());
         });
 
@@ -374,7 +373,7 @@ where
             .into_inner()
             .unwrap()?;
 
-        let mut acc = <G as CurveAffine>::Projective::zero();
+        let mut acc = G::Projective::zero();
         for r in results {
             acc.add_assign(&r);
         }
@@ -391,15 +390,15 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-
     use std::time::Instant;
-
-    use pairing_ce::bn256::Bn256;
     use pairing_ce::ff::Field;
-    use pairing_ce::ff::ScalarEngine;
-    use rand::{thread_rng, Rng};
+    use rand::{thread_rng, Rng, Rand};
 
-    use crate::multiexp_cpu::{FullDensity, QueryDensity, SourceBuilder};
+    //use pairing_ce::bn256::Bn256;
+    use pairing_ce::compact_bn256::Bn256;
+    //use pairing_ce::bls12_381::Bls12 as Bn256;
+
+    use crate::multiexp_cpu::{multiexp_cpu, FullDensity, QueryDensity, SourceBuilder};
 
     fn multiexp_gpu<Q, D, G, E, S>(
         pool: &Worker,
@@ -407,7 +406,7 @@ mod tests {
         density_map: D,
         exponents: Arc<Vec<<G::Scalar as PrimeField>::Repr>>,
         kern: &mut MultiexpKernel<E>,
-    ) -> Result<<G as CurveAffine>::Projective, EcError>
+    ) -> Result<G::Projective, EcError>
     where
         for<'a> &'a Q: QueryDensity,
         D: Send + Sync + 'static + Clone + AsRef<Q>,
@@ -423,8 +422,6 @@ mod tests {
 
     #[test]
     fn gpu_multiexp_consistency() {
-        let rng1 = &mut thread_rng();
-
         const MAX_LOG_D: usize = 16;
         const START_LOG_D: usize = 10;
         let devices = Device::all();
@@ -433,6 +430,7 @@ mod tests {
         let pool = Worker::new();
 
         let mut rng = rand::thread_rng();
+        let rng_1 = &mut thread_rng();
 
         let mut bases = (0..(1 << 10))
             .map(|_| <Bn256 as Engine>::G1::rand(&mut rng).into_affine())
@@ -444,11 +442,15 @@ mod tests {
             let samples = 1 << log_d;
             println!("Testing Multiexp for {} elements...", samples);
 
+            // let v = Arc::new(
+            //     (0..samples)
+            //         .map(|_| <Bn256 as Engine>::Fr::random(&mut rng).to_repr())
+            //         .collect::<Vec<_>>(),
+            // );
 
-            let v: Arc<Vec<ScalarEngine::Fr>> = Arc::new(
-                (0..samples)
-                    .map(|_| rng1.gen()).collect::<Vec<_>>(),
-            );
+            let v: Arc<Vec<<Bn256 as ScalarEngine>::Fr>> = Arc::new(
+                (0..samples).map(|_| rng_1.gen()).collect::<Vec<_>>());
+
 
             let mut now = Instant::now();
             let gpu =
@@ -456,17 +458,17 @@ mod tests {
             let gpu_dur = now.elapsed().as_secs() * 1000 + now.elapsed().subsec_millis() as u64;
             println!("GPU took {}ms.", gpu_dur);
 
-            // now = Instant::now();
-            // let cpu =
-            //     multiexp_cpu::<_, _, _, Bn256, _>(&pool, (g.clone(), 0), FullDensity, v.clone())
-            //         .wait()
-            //         .unwrap();
-            // let cpu_dur = now.elapsed().as_secs() * 1000 + now.elapsed().subsec_millis() as u64;
-            // println!("CPU took {}ms.", cpu_dur);
-            //
-            // println!("Speedup: x{}", cpu_dur as f32 / gpu_dur as f32);
-            //
-            // assert_eq!(cpu, gpu);
+            now = Instant::now();
+            let cpu =
+                multiexp_cpu::<_, _, _, Bn256, _>(&pool, (g.clone(), 0), FullDensity, v.clone())
+                    .wait()
+                    .unwrap();
+            let cpu_dur = now.elapsed().as_secs() * 1000 + now.elapsed().subsec_millis() as u64;
+            println!("CPU took {}ms.", cpu_dur);
+
+            println!("Speedup: x{}", cpu_dur as f32 / gpu_dur as f32);
+
+            assert_eq!(cpu, gpu);
 
             println!("============================");
 
