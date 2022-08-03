@@ -7,7 +7,6 @@ use std::sync::Arc;
 use bitvec::prelude::{BitVec, Lsb0};
 
 //use group::{prime::PrimeCurveAffine, Group};
-use pairing_ce::gpu_engine::GpuEngine;
 use pairing_ce::ff::{Field, PrimeField, ScalarEngine};
 use pairing_ce::{Engine, CurveAffine, CurveProjective};
 
@@ -276,8 +275,8 @@ where
         // Create space for the buckets
         let mut buckets = vec![<G as CurveAffine>::Projective::zero(); (1 << c) - 1];
 
-        let zero = G::Scalar::zero().to_repr();
-        let one = G::Scalar::one().to_repr();
+        let zero = G::Scalar::zero().into_repr();
+        let one = G::Scalar::one().into_repr();
 
         // only the first round uses this
         let handle_trivial = skip == 0;

@@ -1,11 +1,10 @@
 use std::any::TypeId;
-use std::ops::AddAssign;
 use std::sync::{Arc, RwLock};
 use log::{error, info};
 
 //use group::{prime::PrimeCurveAffine, Group};
 use pairing_ce::gpu_engine::GpuEngine;
-use pairing_ce::ff::{PrimeField, ScalarEngine};
+use pairing_ce::ff::PrimeField;
 use pairing_ce::{Engine, CurveAffine, CurveProjective};
 
 use rust_gpu_tools::{program_closures, Device, Program};
@@ -92,7 +91,7 @@ where
 ///
 /// It's the actual bytes size it needs in memory, not it's theoratical bit size.
 fn exp_size<E: Engine>() -> usize {
-    std::mem::size_of::<<E::Fr as ff::PrimeField>::Repr>()
+    std::mem::size_of::<<E::Fr as pairing_ce::ff::PrimeField>::Repr>()
 }
 
 impl<'a, E> SingleMultiexpKernel<'a, E>
@@ -206,7 +205,7 @@ where
         for i in 0..num_windows {
             let w = std::cmp::min(window_size, exp_bits - bits);
             for _ in 0..w {
-                acc = acc.double();
+                acc.double();
             }
             for g in 0..num_groups {
                 acc.add_assign(&results[g * num_windows + i]);
