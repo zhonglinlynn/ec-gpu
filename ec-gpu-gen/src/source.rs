@@ -1,7 +1,7 @@
 use std::fmt::Write;
 use std::mem;
 
-use ec_gpu::{GpuEngine, GpuField};
+use pairing::gpu_engine::{GpuEngine, GpuField};
 
 static COMMON_SRC: &str = include_str!("cl/common.cl");
 static FIELD_SRC: &str = include_str!("cl/field.cl");

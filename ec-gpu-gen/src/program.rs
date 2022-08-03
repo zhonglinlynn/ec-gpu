@@ -1,6 +1,9 @@
 use std::env;
 
-use ec_gpu::GpuEngine;
+//use ec_gpu::GpuEngine;
+use pairing::gpu_engine::GpuEngine;
+
+
 use log::info;
 use pairing::arithmetic::Engine;
 #[cfg(feature = "cuda")]
