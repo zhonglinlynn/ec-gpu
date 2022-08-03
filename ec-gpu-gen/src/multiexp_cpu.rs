@@ -63,7 +63,7 @@ impl<G: CurveAffine > Source<G> for (Arc<Vec<G>>, usize) {
             ));
         }
 
-        to.add_assign(&self.0[self.1]);
+        to.add_assign_mixed(&self.0[self.1]);
 
         self.1 += 1;
 
