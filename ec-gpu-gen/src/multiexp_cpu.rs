@@ -293,7 +293,7 @@ where
                         bases.skip(1)?;
                     }
                 } else {
-                    let mut exp = exp;
+                    let mut exp = exp as u8;
                     shr(exp.as_mut(), skip);
                     let exp = u64::from_le_bytes(exp.as_ref()[..8].try_into().unwrap()) % (1 << c);
 
