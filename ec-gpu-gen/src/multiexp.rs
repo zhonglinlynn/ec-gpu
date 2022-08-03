@@ -395,7 +395,6 @@ mod tests {
 
     use std::time::Instant;
 
-    use blstrs::Bls12;
     use pairing_ce::bn256::Bn256;
     use pairing_ce::ff::Field;
     use group::Curve;
@@ -437,7 +436,7 @@ mod tests {
         let mut rng = rand::thread_rng();
 
         let mut bases = (0..(1 << 10))
-            .map(|_| <Bn256 as Engine>::G1::rand(&mut rng).to_affine())
+            .map(|_| <Bn256 as Engine>::G1::rand(&mut rng).into_affine())
             .collect::<Vec<_>>();
 
         for log_d in START_LOG_D..=MAX_LOG_D {
@@ -446,7 +445,8 @@ mod tests {
             let samples = 1 << log_d;
             println!("Testing Multiexp for {} elements...", samples);
 
-            let v = Arc::new(
+
+            let v: Arc<Vec<ScalarEngine::Fr>> = Arc::new(
                 (0..samples)
                     .map(|_| rng1.gen()).collect::<Vec<_>>(),
             );
