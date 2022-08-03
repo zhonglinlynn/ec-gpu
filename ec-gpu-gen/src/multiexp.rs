@@ -2,7 +2,8 @@ use std::any::TypeId;
 use std::ops::AddAssign;
 use std::sync::{Arc, RwLock};
 
-use ec_gpu::GpuEngine;
+//use ec_gpu::GpuEngine;
+use pairing::gpu_engine::GpuEngine;
 use ff::PrimeField;
 use group::{prime::PrimeCurveAffine, Group};
 use log::{error, info, warn};

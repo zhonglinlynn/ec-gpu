@@ -2,7 +2,9 @@ use std::cmp;
 use std::ops::MulAssign;
 use std::sync::{Arc, RwLock};
 
-use ec_gpu::GpuEngine;
+//use ec_gpu::GpuEngine;
+use pairing::gpu_engine::GpuEngine;
+
 use ff::Field;
 use log::{error, info};
 use pairing::arithmetic::Engine;
