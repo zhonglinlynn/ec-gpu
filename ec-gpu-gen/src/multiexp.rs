@@ -397,10 +397,11 @@ mod tests {
 
     use pairing_ce::bn256::Bn256;
     use pairing_ce::ff::Field;
+    use pairing_ce::ScalarEngine;
     use group::Curve;
     use rand::{thread_rng, Rng};
 
-    use crate::multiexp_cpu::{multiexp_cpu, FullDensity, QueryDensity, SourceBuilder};
+    //use crate::multiexp_cpu::{multiexp_cpu, FullDensity, QueryDensity, SourceBuilder};
 
     fn multiexp_gpu<Q, D, G, E, S>(
         pool: &Worker,
