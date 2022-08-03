@@ -390,7 +390,7 @@ where
 mod tests {
     use super::*;
     use std::time::Instant;
-    use pairing_ce::ff::Field;
+    use pairing_ce::ff::{Field, ScalarEngine};
     use rand::{thread_rng, Rng, Rand};
 
     //use pairing_ce::bn256::Bn256;
@@ -449,7 +449,6 @@ mod tests {
 
             let v: Arc<Vec<<Bn256 as ScalarEngine>::Fr>> = Arc::new(
                 (0..samples).map(|_| rng_1.gen()).collect::<Vec<_>>());
-
 
             let mut now = Instant::now();
             let gpu =
