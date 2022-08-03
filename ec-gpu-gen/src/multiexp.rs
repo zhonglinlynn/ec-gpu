@@ -138,7 +138,7 @@ where
         n: usize,
     ) -> EcResult<<G as CurveAffine>::Projective>
     where
-        G: CurveAffine<Projective = ()>,
+        G: CurveAffine,
     {
         if let Some(maybe_abort) = &self.maybe_abort {
             if maybe_abort() {

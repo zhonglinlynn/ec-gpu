@@ -35,7 +35,7 @@ pub trait Source<G: CurveAffine> {
     fn skip(&mut self, amt: usize) -> Result<(), EcError>;
 }
 
-impl<G: CurveAffine> SourceBuilder<G> for (Arc<Vec<G>>, usize) {
+impl<G: CurveAffine > SourceBuilder<G> for (Arc<Vec<G>>, usize) {
     type Source = (Arc<Vec<G>>, usize);
 
     fn new(self) -> (Arc<Vec<G>>, usize) {
@@ -47,7 +47,7 @@ impl<G: CurveAffine> SourceBuilder<G> for (Arc<Vec<G>>, usize) {
     }
 }
 
-impl<G: CurveAffine + CurveAffine<Projective = G>> Source<G> for (Arc<Vec<G>>, usize) {
+impl<G: CurveAffine > Source<G> for (Arc<Vec<G>>, usize) {
     fn add_assign_mixed(&mut self, to: &mut <G as CurveAffine>::Projective) -> Result<(), EcError> {
         if self.0.len() <= self.1 {
             return Err(io::Error::new(
