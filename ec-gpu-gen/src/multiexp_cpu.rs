@@ -47,7 +47,7 @@ impl<G: CurveAffine> SourceBuilder<G> for (Arc<Vec<G>>, usize) {
     }
 }
 
-impl<G: CurveAffine> Source<G> for (Arc<Vec<G>>, usize) {
+impl<G: CurveAffine + CurveAffine<Projective = G>> Source<G> for (Arc<Vec<G>>, usize) {
     fn add_assign_mixed(&mut self, to: &mut <G as CurveAffine>::Projective) -> Result<(), EcError> {
         if self.0.len() <= self.1 {
             return Err(io::Error::new(
@@ -57,7 +57,7 @@ impl<G: CurveAffine> Source<G> for (Arc<Vec<G>>, usize) {
             .into());
         }
 
-        if self.0[self.1].is_identity().into() {
+        if self.0[self.1].is_zero().into() {
             return Err(EcError::Simple(
                 "Encountered an identity element in the CRS.",
             ));
@@ -278,8 +278,8 @@ where
         // Create space for the buckets
         let mut buckets = vec![<G as CurveAffine>::Projective::zero(); (1 << c) - 1];
 
-        let zero = G::Scalar::zero().to_repr();
-        let one = G::Scalar::one().to_repr();
+        let zero = G::Scalar::zero().into_repr();
+        let one = G::Scalar::one().into_repr();
 
         // only the first round uses this
         let handle_trivial = skip == 0;
@@ -332,7 +332,7 @@ where
         <G as CurveAffine>::Projective::zero(),
         |mut acc, part| {
             for _ in 0..c {
-                acc = acc.double();
+                acc.double();
             }
 
             acc.add_assign(&part?);

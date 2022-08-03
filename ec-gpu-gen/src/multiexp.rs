@@ -93,8 +93,8 @@ where
 /// The size of the exponent in bytes.
 ///
 /// It's the actual bytes size it needs in memory, not it's theoratical bit size.
-fn exp_size<E: Engine>() -> usize {
-    std::mem::size_of::<<E::Fr as ff::PrimeField>::Repr>()
+fn exp_size<E: Engine>() -> usize{
+    std::mem::size_of::<<E::Fr as pairing_ce::ff::PrimeField>::Repr>()
 }
 
 impl<'a, E> SingleMultiexpKernel<'a, E>
@@ -138,7 +138,7 @@ where
         n: usize,
     ) -> EcResult<<G as CurveAffine>::Projective>
     where
-        G: CurveAffine,
+        G: CurveAffine<Projective = ()>,
     {
         if let Some(maybe_abort) = &self.maybe_abort {
             if maybe_abort() {
@@ -208,7 +208,7 @@ where
         for i in 0..num_windows {
             let w = std::cmp::min(window_size, exp_bits - bits);
             for _ in 0..w {
-                acc = acc.double();
+                acc.double();
             }
             for g in 0..num_groups {
                 acc.add_assign(&results[g * num_windows + i]);
