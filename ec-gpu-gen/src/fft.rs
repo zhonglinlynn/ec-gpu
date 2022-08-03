@@ -252,8 +252,8 @@ mod tests {
 
     use pairing_ce::ff::{Field, PrimeField};
 
-    use pairing_ce::bn256::Bn256;
-    //use pairing_ce::compact_bn256::Bn256;
+    //use pairing_ce::bn256::Bn256;
+    use pairing_ce::compact_bn256::Bn256;
     //use pairing_ce::bls12_381::Bls12 as Bn256;
 
     use rand::{thread_rng, Rng};
