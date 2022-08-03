@@ -34,6 +34,7 @@ fn main() {
     println!("cargo:rustc-env=OPENCL_KERNEL_SOURCE=../build.rs");
 }
 
+
 // Put the code into a module, so that we need to repeat the feature flags less often.
 #[cfg(all(
     any(feature = "fft", feature = "multiexp"),
