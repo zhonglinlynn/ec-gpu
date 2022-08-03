@@ -7,7 +7,6 @@ use std::sync::Arc;
 
 use bitvec::prelude::{BitVec, Lsb0};
 
-use pairing_ce::gpu_engine::GpuEngine;
 use pairing_ce::{
     ff::{PrimeField, ScalarEngine, Field},
     CurveAffine, CurveProjective, Engine,
