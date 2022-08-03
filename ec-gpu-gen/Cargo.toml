@@ -17,7 +17,7 @@ group = "0.12.0"
 log = "0.4.14"
 num_cpus = "1.13.0"
 once_cell = "1.8.0"
-pairing_ce = {git = "https://github.com/zhonglinlynn/pairing.git", branch = "pairing_0.24_fixed"}
+pairing_ce = {git = "https://github.com/zhonglinlynn/pairing.git", branch = "fixed_pairing_0.24.2"}
 rayon = "1.5.1"
 rust-gpu-tools = { version = "0.6.1", default-features = false, optional = true }
 temp-env = "0.2.0"
