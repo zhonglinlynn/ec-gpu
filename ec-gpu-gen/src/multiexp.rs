@@ -1,5 +1,4 @@
 use std::any::TypeId;
-use std::ops::AddAssign;
 use std::sync::{Arc, RwLock};
 use log::{error, info};
 
@@ -397,8 +396,7 @@ mod tests {
 
     use pairing_ce::bn256::Bn256;
     use pairing_ce::ff::Field;
-    use pairing_ce::ScalarEngine;
-    use group::Curve;
+    use pairing_ce::ff::ScalarEngine;
     use rand::{thread_rng, Rng};
 
     //use crate::multiexp_cpu::{multiexp_cpu, FullDensity, QueryDensity, SourceBuilder};
