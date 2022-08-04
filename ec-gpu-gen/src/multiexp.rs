@@ -3,8 +3,8 @@ use std::sync::{Arc, RwLock};
 use log::{error, info};
 
 //use group::{prime::PrimeCurveAffine, Group};
-use pairing_ce::gpu_engine::GpuEngine;
-use pairing_ce::ff::PrimeField;
+//use pairing_ce::gpu_engine::GpuEngine;
+use pairing_ce::ff::{PrimeField, ScalarEngine};
 use pairing_ce::{Engine, CurveAffine, CurveProjective};
 
 use rust_gpu_tools::{program_closures, Device, Program};
@@ -48,7 +48,7 @@ const fn work_units(compute_units: u32, compute_capabilities: Option<(u32, u32)>
 /// Multiexp kernel for a single GPU.
 pub struct SingleMultiexpKernel<'a, E>
 where
-    E: Engine + GpuEngine,
+    E: Engine, // + GpuEngine
 {
     program: Program,
     /// The number of exponentiations the GPU can handle in a single execution of the kernel.
@@ -96,7 +96,7 @@ fn exp_size<E: Engine>() -> usize {
 
 impl<'a, E> SingleMultiexpKernel<'a, E>
 where
-    E: Engine + GpuEngine,
+    E: Engine, // + GpuEngine
 {
     /// Create a new kernel for a device.
     ///
@@ -128,12 +128,14 @@ where
     /// The number of `bases` and `exponents` are determined by [`SingleMultiexpKernel`]`::n`, this
     /// means that it is guaranteed that this amount of calculations fit on the GPU this kernel is
     /// running on.
+    /// exps: &[<G::Scalar as PrimeField>::Repr],
+    /// EcResult<G::Projective>
     pub fn multiexp<G>(
         &self,
         bases: &[G],
-        exps: &[<G::Scalar as PrimeField>::Repr],
+        exps: &[<<G::Engine as ScalarEngine>::Fr as PrimeField>::Repr],
         n: usize,
-    ) -> EcResult<G::Projective>
+    ) -> EcResult<<G as CurveAffine>::Projective>
     where
         G: CurveAffine,
     {
@@ -233,14 +235,14 @@ where
 /// A struct that containts several multiexp kernels for different devices.
 pub struct MultiexpKernel<'a, E>
 where
-    E: Engine + GpuEngine,
+    E: Engine, // + GpuEngine
 {
     kernels: Vec<SingleMultiexpKernel<'a, E>>,
 }
 
 impl<'a, E> MultiexpKernel<'a, E>
 where
-    E: Engine + GpuEngine,
+    E: Engine, // + GpuEngine
 {
     /// Create new kernels, one for each given device.
     pub fn create(devices: &[&Device]) -> EcResult<Self> {
@@ -393,8 +395,8 @@ mod tests {
     use pairing_ce::ff::ScalarEngine;
     use rand::Rand;
 
-    use pairing_ce::compact_bn256::Bn256;
-    //use pairing_ce::bn256::Bn256;
+    //use pairing_ce::compact_bn256::Bn256;
+    use pairing_ce::bn256::Bn256;
     //use pairing_ce::bls12_381::Bls12 as Bn256;
 
     use crate::multiexp_cpu::{multiexp_cpu, FullDensity, QueryDensity, SourceBuilder};
@@ -409,8 +411,7 @@ mod tests {
     where
         for<'a> &'a Q: QueryDensity,
         D: Send + Sync + 'static + Clone + AsRef<Q>,
-        G: CurveAffine,
-        E: GpuEngine,
+        G: CurveAffine, //E: GpuEngine,
         E: Engine<Fr = G::Scalar>,
         S: SourceBuilder<G>,
     {
