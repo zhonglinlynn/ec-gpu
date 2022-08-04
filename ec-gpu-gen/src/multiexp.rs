@@ -393,9 +393,9 @@ mod tests {
     use pairing_ce::ff::ScalarEngine;
     use rand::Rand;
 
-    //use pairing_ce::compact_bn256::Bn256;
+    use pairing_ce::compact_bn256::Bn256;
     //use pairing_ce::bn256::Bn256;
-    use pairing_ce::bls12_381::Bls12 as Bn256;
+    //use pairing_ce::bls12_381::Bls12 as Bn256;
 
     use crate::multiexp_cpu::{multiexp_cpu, FullDensity, QueryDensity, SourceBuilder};
 
@@ -421,7 +421,7 @@ mod tests {
 
     #[test]
     fn test_multiexp_gpu() {
-        const MAX_LOG_D: usize = 20;
+        const MAX_LOG_D: usize = 16;
         const START_LOG_D: usize = 10;
         let devices = Device::all();
         let mut kern =
@@ -442,7 +442,7 @@ mod tests {
 
             let v = Arc::new((0..samples)
                 .map(|_| {
-                    <Bn256 as ScalarEngine>::Fr::from_str("1000")
+                    <Bn256 as ScalarEngine>::Fr::from_str("1011100101010100000")
                         .unwrap()
                         .into_repr()
                 })
