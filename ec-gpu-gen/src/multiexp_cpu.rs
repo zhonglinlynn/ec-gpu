@@ -406,7 +406,7 @@ mod tests {
         let rng = &mut rand::thread_rng();
         let rng_1 = &mut thread_rng();
 
-        let v: Vec<<Bn256 as ScalarEngine>::Fr> = (0..SAMPLES)
+        let v = (0..SAMPLES)
             .map(|_| rng_1.gen()).collect::<Vec<_>>();
 
 
@@ -423,7 +423,9 @@ mod tests {
         let now = std::time::Instant::now();
         let pool = Worker::new();
 
-        let v = Arc::new(v.into_iter().map(|fr| fr.to_repr()).collect());
+        let v = Arc::new(v.into_iter().map(|fr| fr.into_repr()).collect());
+
+
         let fast = multiexp_cpu::<_, _, _, Bn256, _>(&pool, (g, 0), FullDensity, v)
             .wait()
             .unwrap();
