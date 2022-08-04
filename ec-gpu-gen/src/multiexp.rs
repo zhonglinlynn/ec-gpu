@@ -391,7 +391,7 @@ mod tests {
     use super::*;
     use std::time::Instant;
     use pairing_ce::ff::ScalarEngine;
-    use rand::{thread_rng, Rand};
+    use rand::Rand;
 
     //use pairing_ce::bn256::Bn256;
     use pairing_ce::compact_bn256::Bn256;
@@ -429,7 +429,6 @@ mod tests {
         let pool = Worker::new();
 
         let mut rng = rand::thread_rng();
-        // let rng_1 = &mut thread_rng();
 
         let mut bases = (0..(1 << 10))
             .map(|_| <Bn256 as Engine>::G1::rand(&mut rng).into_affine())
