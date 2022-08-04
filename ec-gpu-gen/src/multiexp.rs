@@ -395,6 +395,7 @@ mod tests {
     use pairing_ce::ff::ScalarEngine;
     use rand::Rand;
 
+    // here must be compact_bn256::Bn256
     use pairing_ce::compact_bn256::Bn256;
     //use pairing_ce::bn256::Bn256;
     //use pairing_ce::bls12_381::Bls12 as Bn256;
