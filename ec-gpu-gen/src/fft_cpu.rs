@@ -118,9 +118,12 @@ pub fn parallel_fft<E: Engine>(
 mod tests {
     use super::*;
     use std::cmp::min;
-    use pairing_ce::bn256::Bn256;
     use pairing_ce::ff::PrimeField;
     use rand::Rng;
+
+    use pairing_ce::bn256::Bn256;
+    //use pairing_ce::compact_bn256::Bn256;
+    //use pairing_ce::bls12_381::Bls12 as Bn256;
 
     fn omega<E: Engine>(num_coeffs: usize) -> E::Fr {
         // Compute omega, the 2^exp primitive root of unity
