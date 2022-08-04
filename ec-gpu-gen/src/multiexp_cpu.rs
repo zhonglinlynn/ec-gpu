@@ -216,38 +216,6 @@ impl DensityTracker {
     }
 }
 
-// Right shift the repr of a field element by `n` bits.
-fn shr(le_bytes: &mut [u8], mut n: u32) {
-    if n >= 8 * le_bytes.len() as u32 {
-        le_bytes.iter_mut().for_each(|byte| *byte = 0);
-        return;
-    }
-
-    // Shift each full byte towards the least significant end.
-    while n >= 8 {
-        let mut replacement = 0;
-        for byte in le_bytes.iter_mut().rev() {
-            std::mem::swap(&mut replacement, byte);
-        }
-        n -= 8;
-    }
-
-    // Starting at the most significant byte, shift the byte's `n` least significant bits into the
-    // `n` most signficant bits of the next byte.
-    if n > 0 {
-        let mut shift_in = 0;
-        for byte in le_bytes.iter_mut().rev() {
-            // Copy the byte's `n` least significant bits.
-            let shift_out = *byte << (8 - n);
-            // Shift the byte by `n` bits; zeroing its `n` most significant bits.
-            *byte >>= n;
-            // Replace the `n` most significant bits with the bits shifted out of the previous byte.
-            *byte |= shift_in;
-            shift_in = shift_out;
-        }
-    }
-}
-
 fn multiexp_inner<Q, D, G, S>(
     bases: S,
     density_map: D,
@@ -408,13 +376,6 @@ mod tests {
 
         let v = (0..SAMPLES).map(|_| rng_1.gen()).collect::<Vec<_>>();
 
-        // let v = (0..samples).map(|_| {
-        //         <Bn256 as ScalarEngine>::Fr::from_str("1000")
-        //             .unwrap()
-        //             .into_repr()
-        //     })
-        //     .collect::<Vec<_>>();
-
         let g = Arc::new(
             (0..SAMPLES).map(|_| <Bn256 as Engine>::G1::rand(&mut *rng).into_affine())
                 .collect::<Vec<_>>()
@@ -430,15 +391,6 @@ mod tests {
         let v = Arc::new(
             v.into_iter().map(|fr| fr.into_repr()).collect::<Vec<_>>()
         );
-
-        // let v = Arc::new((0..samples)
-        //     .map(|_| {
-        //         <Bn256 as ScalarEngine>::Fr::from_str("1000")
-        //             .unwrap()
-        //             .into_repr()
-        //     })
-        //     .collect::<Vec<_>>());
-
 
         let fast = multiexp_cpu::<_, _, _, Bn256, _>(&pool, (g, 0), FullDensity, v)
             .wait()

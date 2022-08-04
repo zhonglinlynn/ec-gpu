@@ -441,15 +441,6 @@ mod tests {
             let samples = 1 << log_d;
             println!("Testing Multiexp for {} elements...", samples);
 
-            // let v = Arc::new(
-            //     (0..samples)
-            //         .map(|_| <Bn256 as Engine>::Fr::random(&mut rng).to_repr())
-            //         .collect::<Vec<_>>(),
-            // );
-
-            // let v: Arc<Vec<<Bn256 as ScalarEngine>::Fr>> = Arc::new(
-            //     (0..samples).map(|_| rng_1.gen()).collect::<Vec<_>>());
-
             let v = Arc::new((0..samples)
                 .map(|_| {
                     <Bn256 as ScalarEngine>::Fr::from_str("1000")
@@ -457,9 +448,6 @@ mod tests {
                         .into_repr()
                 })
                 .collect::<Vec<_>>());
-
-            // let v = Arc::new(
-            //     (0..samples).map(|_| rng_1.gen()).collect::<Vec<_>>());
 
             let mut now = Instant::now();
             let gpu =
