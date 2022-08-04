@@ -17,9 +17,9 @@ use crate::{
 };
 
 /// On the GPU, the exponents are split into windows, this is the maximum number of such windows.
-const MAX_WINDOW_SIZE: usize = 10;
+const MAX_WINDOW_SIZE: usize = 12; //10;
 /// In CUDA this is the number of blocks per grid (grid size).
-const LOCAL_WORK_SIZE: usize = 128;
+const LOCAL_WORK_SIZE: usize = 256; //128;
 /// Let 20% of GPU memory be free, this is an arbitrary value.
 const MEMORY_PADDING: f64 = 0.2f64;
 /// The Nvidia Ampere architecture is compute capability major version 8.
@@ -395,8 +395,8 @@ mod tests {
     use pairing_ce::ff::ScalarEngine;
     use rand::Rand;
 
-    use pairing_ce::compact_bn256::Bn256;
-    //use pairing_ce::bn256::Bn256;
+    //use pairing_ce::compact_bn256::Bn256;
+    use pairing_ce::bn256::Bn256;
     //use pairing_ce::bls12_381::Bls12 as Bn256;
 
     use crate::multiexp_cpu::{multiexp_cpu, FullDensity, QueryDensity, SourceBuilder};
