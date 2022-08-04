@@ -6,7 +6,7 @@ use std::sync::Arc;
 use bitvec::prelude::{BitVec, Lsb0};
 
 //use group::{prime::PrimeCurveAffine, Group};
-use pairing_ce::ff::{Field, PrimeField, ScalarEngine};
+use pairing_ce::ff::{Field, PrimeField, PrimeFieldRepr, ScalarEngine};
 use pairing_ce::{Engine, CurveAffine, CurveProjective};
 
 use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
@@ -294,7 +294,10 @@ where
                     }
                 } else {
                     let mut exp = exp;
-                    shr(exp.as_mut(), skip);
+
+                    //shr(exp.as_mut(), skip);
+                    exp.shr(skip);
+
                     //let exp = u64::from_le_bytes(exp.as_ref()[..8].try_into().unwrap()) % (1 << c);
                     let exp = exp.as_ref()[0] % (1 << c);
 
