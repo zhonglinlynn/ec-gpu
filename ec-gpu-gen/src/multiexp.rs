@@ -394,8 +394,8 @@ mod tests {
     use rand::Rand;
 
     //use pairing_ce::bn256::Bn256;
-    //use pairing_ce::compact_bn256::Bn256;
-    use pairing_ce::bls12_381::Bls12 as Bn256;
+    use pairing_ce::compact_bn256::Bn256;
+    //use pairing_ce::bls12_381::Bls12 as Bn256;
 
     use crate::multiexp_cpu::{multiexp_cpu, FullDensity, QueryDensity, SourceBuilder};
 
