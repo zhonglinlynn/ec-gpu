@@ -349,8 +349,8 @@ mod tests {
 
 
     use rand::{thread_rng, Rng, Rand};
-    use rand_core::SeedableRng;
-    use rand_xorshift::XorShiftRng;
+    // use rand_core::SeedableRng;
+    // use rand_xorshift::XorShiftRng;
 
     #[test]
     fn test_multiexp_cpu() {
