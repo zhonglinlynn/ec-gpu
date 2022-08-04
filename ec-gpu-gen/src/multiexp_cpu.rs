@@ -1,5 +1,5 @@
 #![allow(missing_docs)]
-use std::convert::TryInto;
+// use std::convert::TryInto;
 use std::io;
 use std::iter;
 use std::sync::Arc;
@@ -385,7 +385,7 @@ mod tests {
     use rand_xorshift::XorShiftRng;
 
     #[test]
-    fn multiexp() {
+    fn test_multiexp_cpu() {
         fn naive_multiexp<G: CurveAffine>(
             bases: Arc<Vec<G>>,
             exponents: &[G::Scalar],

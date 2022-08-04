@@ -133,7 +133,7 @@ mod tests {
     }
 
     #[test]
-    fn parallel_fft_consistency() {
+    fn test_fft_cpu() {
         let worker = Worker::new();
         let rng = &mut rand::thread_rng();
         for _ in 0..5 {

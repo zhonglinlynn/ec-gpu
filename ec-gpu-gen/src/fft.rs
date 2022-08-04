@@ -274,7 +274,7 @@ mod tests {
     }
 
     #[test]
-    pub fn gpu_fft() {
+    pub fn test_fft_gpu() {
         let rng = &mut thread_rng();
 
         let worker = Worker::new();
