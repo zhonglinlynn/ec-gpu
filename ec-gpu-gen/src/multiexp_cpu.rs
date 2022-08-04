@@ -295,7 +295,8 @@ where
                 } else {
                     let mut exp = exp;
                     shr(exp.as_mut(), skip);
-                    let exp = u64::from_le_bytes(exp.as_ref()[..8].try_into().unwrap()) % (1 << c);
+                    //let exp = u64::from_le_bytes(exp.as_ref()[..8].try_into().unwrap()) % (1 << c);
+                    let exp = exp.as_ref()[0] % (1 << c);
 
                     if exp != 0 {
                         bases.add_assign_mixed(&mut buckets[(exp - 1) as usize])?;
