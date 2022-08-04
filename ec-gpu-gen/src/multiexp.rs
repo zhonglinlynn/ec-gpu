@@ -421,7 +421,7 @@ mod tests {
 
     #[test]
     fn test_multiexp_gpu() {
-        const MAX_LOG_D: usize = 16;
+        const MAX_LOG_D: usize = 20;
         const START_LOG_D: usize = 10;
         let devices = Device::all();
         let mut kern =
